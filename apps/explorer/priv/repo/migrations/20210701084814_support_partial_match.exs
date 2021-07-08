@@ -3,7 +3,7 @@ defmodule Explorer.Repo.Migrations.SupportPartialMatch do
 
   def change do
     alter table(:smart_contracts) do
-      add(:partial_verified, :boolean, null: true)
+      add(:partially_verified, :boolean, null: true)
     end
   end
 end

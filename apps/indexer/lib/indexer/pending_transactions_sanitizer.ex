@@ -13,6 +13,7 @@ defmodule Indexer.PendingTransactionsSanitizer do
   alias Ecto.Changeset
   alias Explorer.{Chain, Repo}
   alias Explorer.Chain.Import.Runner.Blocks
+  alias Explorer.Chain.Transaction
 
   @interval :timer.hours(3)
 
@@ -83,7 +84,7 @@ defmodule Indexer.PendingTransactionsSanitizer do
               fetcher: :pending_transactions_to_refetch
             )
 
-            fetch_block_and_invalidate(block_hash)
+            fetch_block_and_invalidate(block_hash, pending_tx)
           else
             Logger.debug(
               "Transaction with hash #{pending_tx_hash_str} is still pending. Do nothing.",
@@ -129,9 +130,9 @@ defmodule Indexer.PendingTransactionsSanitizer do
     end
   end
 
-  defp fetch_block_and_invalidate(block_hash) do
+  defp fetch_block_and_invalidate(block_hash, pending_tx) do
     case Chain.fetch_block_by_hash(block_hash) do
-      %{number: number, consensus: consensus} ->
+      %{number: number, consensus: consensus} = block ->
         Logger.debug(
           "Corresponding number of the block with hash #{block_hash} to invalidate is #{number} and consensus #{
             consensus
@@ -139,7 +140,7 @@ defmodule Indexer.PendingTransactionsSanitizer do
           fetcher: :pending_transactions_to_refetch
         )
 
-        invalidate_block(number, consensus)
+        invalidate_block(number, consensus, pending_tx, block)
 
       _ ->
         Logger.debug(
@@ -149,7 +150,7 @@ defmodule Indexer.PendingTransactionsSanitizer do
     end
   end
 
-  defp invalidate_block(number, consensus) do
+  defp invalidate_block(number, consensus, pending_tx, block) do
     if consensus do
       opts = %{
         timeout: 60_000,
@@ -157,6 +158,14 @@ defmodule Indexer.PendingTransactionsSanitizer do
       }
 
       Blocks.lose_consensus(Repo, [], [number], [], opts)
+    else
+      changeset = 
+        pending_tx
+        |> Transaction.changeset()
+        |> Changeset.put_change(:error, "dropped/replaced")
+        |> Changeset.put_change(:block_hash, block.hash)
+      Logger.debug("Pending tx with hash #{pending_tx.hash} was marked as dropped/replaced and set blockHash to #{block.hash}")
+      Repo.update(changeset)
     end
   end
 end

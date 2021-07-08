@@ -96,7 +96,7 @@ defmodule Explorer.SmartContract.Publisher do
       secondary_sources: params["secondary_sources"],
       abi: abi,
       verified_via_sourcify: params["verified_via_sourcify"],
-      partial_verified: params["partial_verified"]
+      partially_verified: params["partially_verified"]
     }
   end
 

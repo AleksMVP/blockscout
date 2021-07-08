@@ -10,7 +10,7 @@ defmodule BlockScoutWeb.AddressContractVerificationController do
   alias Explorer.ThirdPartyIntegrations.Sourcify
 
   def new(conn, %{"address_id" => address_hash_string}) do
-    if Chain.smart_contract_full_verified?(address_hash_string) do
+    if Chain.smart_contract_fully_verified?(address_hash_string) do
       redirect(conn, to: address_path(conn, :show, address_hash_string))
     else
       changeset =
@@ -65,7 +65,7 @@ defmodule BlockScoutWeb.AddressContractVerificationController do
     json_file = json_files |> Enum.at(0)
 
     if json_file do
-      if Chain.smart_contract_full_verified?(address_hash_string) do
+      if Chain.smart_contract_fully_verified?(address_hash_string) do
         EventsPublisher.broadcast(
           prepare_verification_error(
             "This contract already verified in Blockscout.",
@@ -154,7 +154,7 @@ defmodule BlockScoutWeb.AddressContractVerificationController do
 
     ContractController.publish(conn, %{
       "addressHash" => address_hash_string,
-      "params" => Map.put(params_to_publish, "partial_verified", is_partial),
+      "params" => Map.put(params_to_publish, "partially_verified", is_partial),
       "abi" => abi,
       "secondarySources" => secondary_sources
     })
@@ -272,8 +272,8 @@ defmodule BlockScoutWeb.AddressContractVerificationController do
   end
 
   def check_and_verify(address_hash_string) do
-    if Chain.smart_contract_full_verified?(address_hash_string) do
-      {:ok, :already_full_verified}
+    if Chain.smart_contract_fully_verified?(address_hash_string) do
+      {:ok, :already_fully_verified}
     else
       if Chain.smart_contract_verified?(address_hash_string) do
         case Sourcify.check_by_address(address_hash_string) do
